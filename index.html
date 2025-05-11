@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HearthLink💖</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Sans MS', cursive;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    h1 {
+      color: white;
+      font-size: 3em;
+      animation: pulse 2s infinite;
+      text-align: center;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .buttons {
+      display: flex;
+      gap: 20px;
+      margin-top: 30px;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    #yesBtn {
+      background-color: #ff4d6d;
+      color: white;
+    }
+    #noBtn {
+      background-color: #ffe066;
+      color: #222;
+      position: relative;
+    }
+    #message {
+      margin-top: 40px;
+      font-size: 2em;
+      color: white;
+      display: none;
+      animation: fadeIn 1s ease-in-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #shareLink {
+      margin-top: 20px;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      color: #444;
+      font-size: 1em;
+      display: none;
+      word-break: break-all;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 90%;
+    }
+    .modal input {
+      width: 80%;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .modal button {
+      margin-top: 15px;
+      background: #ff4d6d;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="mainTitle">HeartLink</h1>
+  <div class="buttons" id="buttonArea" style="display:none;">
+    <button id="yesBtn">Yes</button>
+    <button id="noBtn">No</button>
+  </div>
+  <div id="message"></div>
+  <div id="shareLink"></div>
+
+  <div class="modal" id="modal" style="display:none;">
+    <div class="modal-content">
+      <h2>Create Your Custom Message</h2>
+      <input type="text" id="customQuestion" placeholder="Enter your question (e.g., Do you love me?)">
+      <br/>
+      <input type="text" id="customMessage" placeholder="Enter your sweet message">
+      <br/>
+      <input type="text" id="yesText" placeholder="Yes button text (e.g., Yes)">
+      <br/>
+      <input type="text" id="noText" placeholder="No button text (e.g., No)">
+      <br/>
+      <button id="createBtn">Create & Share</button>
+    </div>
+  </div>
+
+  <script>
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn = document.getElementById('noBtn');
+    const message = document.getElementById('message');
+    const shareLink = document.getElementById('shareLink');
+    const buttonArea = document.getElementById('buttonArea');
+    const mainTitle = document.getElementById('mainTitle');
+    const modal = document.getElementById('modal');
+    const createBtn = document.getElementById('createBtn');
+    const customMessageInput = document.getElementById('customMessage');
+    const customQuestionInput = document.getElementById('customQuestion');
+    const yesTextInput = document.getElementById('yesText');
+    const noTextInput = document.getElementById('noText');
+
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    function decodeBase64(str) {
+      try {
+        return decodeURIComponent(atob(str));
+      } catch { return ''; }
+    }
+
+    function encodeBase64(str) {
+      return btoa(encodeURIComponent(str));
+    }
+
+    async function shortenURL(longUrl) {
+      const apiKey = "jvVZJZvPkrNrWCHBjaGknhAmqvvL53BT9n3gGNjvzNBQHP0r1mZQQBbxQXwi";
+      try {
+        const response = await fetch("https://api.tinyurl.com/create", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ url: longUrl, domain: "tinyurl.com" })
+        });
+        const data = await response.json();
+        if (data.data && data.data.tiny_url) {
+          return data.data.tiny_url;
+        } else {
+          console.error("TinyURL error:", data);
+          return longUrl;
+        }
+      } catch (error) {
+        console.error("TinyURL API Error:", error);
+        return longUrl;
+      }
+    }
+
+    const encodedQuestion = getQueryParam("q");
+    const encodedMsg = getQueryParam("msg");
+    const encodedYesText = getQueryParam("yes");
+    const encodedNoText = getQueryParam("no");
+
+    const question = encodedQuestion ? decodeBase64(encodedQuestion) : '';
+    const msg = encodedMsg ? decodeBase64(encodedMsg) : '';
+    const yesBtnText = encodedYesText ? decodeBase64(encodedYesText) : 'Yes';
+    const noBtnText = encodedNoText ? decodeBase64(encodedNoText) : 'No';
+
+    if (msg && question) {
+      buttonArea.style.display = "flex";
+      mainTitle.textContent = question;
+      yesBtn.textContent = yesBtnText;
+      noBtn.textContent = noBtnText;
+
+      yesBtn.onclick = () => {
+        message.textContent = msg;
+        message.style.display = "block";
+      };
+
+      noBtn.onmouseover = () => {
+        const x = Math.random() * (window.innerWidth - 100);
+        const y = Math.random() * (window.innerHeight - 100);
+        noBtn.style.position = 'absolute';
+        noBtn.style.left = `${x}px`;
+        noBtn.style.top = `${y}px`;
+      };
+    } else {
+      modal.style.display = "flex";
+
+      createBtn.onclick = async () => {
+        const customMsg = customMessageInput.value.trim();
+        const customQ = customQuestionInput.value.trim();
+        const yesText = yesTextInput.value.trim() || "Yes";
+        const noText = noTextInput.value.trim() || "No";
+
+        if (customMsg && customQ) {
+          const encodedMsg = encodeBase64(customMsg);
+          const encodedQ = encodeBase64(customQ);
+          const encodedYes = encodeBase64(yesText);
+          const encodedNo = encodeBase64(noText);
+
+          const link = `${window.location.origin}${window.location.pathname}?q=${encodedQ}&msg=${encodedMsg}&yes=${encodedYes}&no=${encodedNo}`;
+          const shortUrl = await shortenURL(link);
+          mainTitle.innerText = "Share Your Link";
+          shareLink.style.display = "block";
+          shareLink.innerText = shortUrl;
+          navigator.clipboard.writeText(shortUrl).catch(() => {});
+          modal.style.display = "none";
+        }
+      };
+    }
+  </script>
+</body>
+</html>
